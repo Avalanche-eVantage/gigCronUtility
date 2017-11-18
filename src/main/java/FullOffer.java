@@ -14,7 +14,14 @@ public class FullOffer {
 	public float duration;
 	public int ratingSum;
 	public int reviewCount;
-
+	public int pushCounter;
+	public float latitude;
+	public float longitude;
+	public String address;
+	public String city;
+	public String state;
+	public String name;
+	
 	public FullOffer(ResultSet rs) throws SQLException {
 		this.offerId = rs.getInt("id");
 		this.clientId = rs.getInt("clientId");
@@ -27,6 +34,13 @@ public class FullOffer {
 		this.duration = rs.getFloat("duration");
 		this.ratingSum = rs.getInt("ratingSum");
 		this.reviewCount = rs.getInt("reviewCount");
+		this.pushCounter = rs.getInt("pushCounter");
+		this.latitude = rs.getFloat("latitude");
+		this.longitude = rs.getFloat("longitude");
+		this.address = rs.getString("address");
+		this.city = rs.getString("city");
+		this.state = rs.getString("state");
+		this.name = rs.getString("name");
 	}
 
 }

@@ -11,8 +11,10 @@ public class Job {
 	public String state;
 	public float latitude;
 	public float longitude;
+	public String name;
 	public int ratingSum;
 	public int reviewCount;
+	
 
 	public Job(ResultSet rs) throws SQLException {
 		this.clientId = rs.getInt("clientId");
@@ -23,6 +25,7 @@ public class Job {
 		this.state = rs.getString("state");
 		this.latitude = rs.getFloat("latitude");
 		this.longitude = rs.getFloat("longitude");
+		this.name = rs.getString("name");
 		this.ratingSum = rs.getInt("ratingSum");
 		this.reviewCount = rs.getInt("reviewCount");
 	}

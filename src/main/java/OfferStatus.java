@@ -8,6 +8,7 @@ public class OfferStatus {
 	public String status;
 	public float latitude;
 	public float longitude;
+	public int pushCounter;
 	
 	public OfferStatus(ResultSet rs) throws SQLException {
 		this.userId = rs.getInt("userId");
@@ -15,6 +16,7 @@ public class OfferStatus {
 		this.status = rs.getString("status");
 		this.latitude = rs.getFloat("latitude");
 		this.longitude = rs.getFloat("longitude");
+		this.pushCounter = rs.getInt("pushCounter");
 	}
 
 }

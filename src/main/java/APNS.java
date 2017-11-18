@@ -187,12 +187,16 @@ public class APNS {
 		   	    
 			   	 for (Device device : devicesList) {				   	    
 			    	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-			    	    payloadBuilder.setContentAvailable(true);
+			    	    //payloadBuilder.setContentAvailable(true);
+			    	    //payloadBuilder.setMutableContent(true);
 			    	    payloadBuilder.setCategoryName("serviceRequest.category");
-			    	    payloadBuilder.setAlertTitle("New Service Request");
-			    	    payloadBuilder.setAlertBody(job.address + ", " + job.city + ", " + job.state);
-			    	    float avgRating = (float)job.ratingSum/(float)job.reviewCount;
-			    	    payloadBuilder.setAlertSubtitle(String.format("%1.1f", avgRating) + " avg. stars, " + job.reviewCount + "total reviews");
+			    	    payloadBuilder.setAlertTitle(job.name);
+			    	    payloadBuilder.setAlertSubtitle("Client service request");
+			    	    float avgRating = 0;
+			    	    if(job.reviewCount > 0) {
+			    	    	avgRating = (float)job.ratingSum/(float)job.reviewCount;
+			    	    }
+			    	    payloadBuilder.setAlertBody(job.address + "\n" + job.city + "\n" + String.format("%1.1f", avgRating) + " avg. stars, " + job.reviewCount + " total reviews");
 			    	    payloadBuilder.setSoundFileName("default");
 			    	    payloadBuilder.addCustomProperty("type", "NewJobs");
 			    	    payloadBuilder.addCustomProperty("jobId", job.jobId);
@@ -219,6 +223,16 @@ public class APNS {
 			    	    LOGGER.info("payload: " + payload);
 						sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ProviderApp", payload);
 						LOGGER.info("pid after: " + device.id);
+						
+			    	    final ApnsPayloadBuilder simplePayloadBuilder = new ApnsPayloadBuilder();
+			    	    simplePayloadBuilder.setContentAvailable(true);
+			    	    simplePayloadBuilder.addCustomProperty("type", "NewJobs");
+			    	    
+			    	    final String simplePayload = simplePayloadBuilder.buildWithDefaultMaximumLength();
+			    	    LOGGER.info("simplePayload: " + simplePayload);
+						sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ProviderApp", simplePayload);
+						LOGGER.info("pid after: " + device.id);
+						
 					}
 	   	    }    
 		        
@@ -288,27 +302,11 @@ public class APNS {
 				final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 				connectFuture.await();
 		        
-				//Time now = new Time(0);
 				Date now = new Date();
 		        for (Device device : devicesList) {
-		        	//cStmt = con.prepareCall("{ CALL getNewJobIdsForPrvdr(?, ?) }");
-			   	    //cStmt.setTimestamp(1, timestamp);
-			   	    //cStmt.setInt(2,  device.userId);
-			   	    //cStmt.execute();
-			   	    //rs = cStmt.getResultSet();
-			   	    
-			   	    //ArrayList<Integer> jobIds = new ArrayList<Integer>();
-
-			   	    //while(rs.next()) {
-			   	    //	jobIds.add(rs.getInt("id"));
-			   	    //	LOGGER.info("sendServiceRequestPushNotifications - jobId: " + rs.getInt("id"));
-			   	    //}
 			   	    
 		    	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-		    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-		    	    //payloadBuilder.setAlertBody("Invalidated Jobs");
-		    	    //payloadBuilder.setSoundFileName("default");
-		    	    //payloadBuilder.setContentAvailable(true);
+		    	    payloadBuilder.setContentAvailable(true);
 		    	    payloadBuilder.addCustomProperty("type", "InvalidatedJobs");
 		    	    
 
@@ -348,38 +346,46 @@ public class APNS {
 	   	    cStmt.execute();
 	   	    rs = cStmt.getResultSet();
 	   	    
-	   	    ArrayList<OfferStatus> newOfferStatuses = new ArrayList<OfferStatus>();
+	   	    ArrayList<OfferStatusWithAddress> offerStatusWithAddresses = new ArrayList<OfferStatusWithAddress>();
 
 	   	    while(rs.next()) {
-	   	    	OfferStatus newOfferStatus = new OfferStatus(rs);
-	   	    	newOfferStatuses.add(newOfferStatus);
-	   	    	LOGGER.info("newOfferStatus userId: " + newOfferStatus.userId + ", status: " + newOfferStatus.status + ", offerId: " + newOfferStatus.offerId);
+	   	    	offerStatusWithAddresses.add(new OfferStatusWithAddress(rs));
 	   	    }
 	   	    
 	   	    final ApnsClient apnsClient = new ApnsClientBuilder()
 	        .setClientCredentials(new File("/home/ec2-user/ProviderAPNSDeveloperCertificates.p12"), "ABCD3fgh!")
 	        .build();
 			
+	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
+
+	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
 
 	   	 	//ArrayList<Device> devicesList = new ArrayList<Device>();
-	   	    for (OfferStatus newOfferStatus : newOfferStatuses) {
+	   	    for (OfferStatusWithAddress offerStatusWithAddress : offerStatusWithAddresses) {
+	   	    	cStmt.close();
 	   	    	cStmt = con.prepareCall("{ CALL getDeviceForUser(?) }");
-		   	    cStmt.setInt(1, newOfferStatus.userId);
-		   	    //cStmt.setInt(2, newAcceptOffer.get(1));
+		   	    cStmt.setInt(1, offerStatusWithAddress.userId);
 
 		   	    cStmt.execute();
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + newOfferStatus.offerId + " - " + newOfferStatus.status);
-	    	    payloadBuilder.setSoundFileName("default");
+		   	    if(offerStatusWithAddress.pushCounter == 0) {
+	    	    	java.util.Date starttime = df1.parse(offerStatusWithAddress.starttime);
+	    	    	payloadBuilder.setAlertTitle(offerStatusWithAddress.name);
+	    	    	payloadBuilder.setAlertSubtitle("Client accepted job");
+	    	    	payloadBuilder.setAlertBody(df2.format(starttime) + "\n" + offerStatusWithAddress.address + "\n" 
+		    	    		+ offerStatusWithAddress.city);
+		    	    payloadBuilder.setSoundFileName("default");
+	    	    }
+		   	    payloadBuilder.setContentAvailable(true);
+		   	    payloadBuilder.setCategoryName("acceptOffer.category");
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", newOfferStatus.offerId);
-	    	    payloadBuilder.addCustomProperty("status", newOfferStatus.status);
-	    	    
+	    	    payloadBuilder.addCustomProperty("offerId", offerStatusWithAddress.offerId);
+	    	    payloadBuilder.addCustomProperty("status", offerStatusWithAddress.status);
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
 	    	    
@@ -390,7 +396,10 @@ public class APNS {
 					sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ProviderApp", payload);
 					LOGGER.info("pid after: " + device.id);
 		   	    }
-
+		   	    cStmt.close();
+	   	    	cStmt = con.prepareCall("{ CALL updatePushCounterForOfferId(?) }");
+		   	    cStmt.setInt(1, offerStatusWithAddress.offerId);
+		   	    cStmt.execute();
 	   	    }
 	   	    final Future<Void> disconnectFuture = apnsClient.disconnect();
 	        disconnectFuture.await();
@@ -418,36 +427,84 @@ public class APNS {
 	   	    cStmt.execute();
 	   	    rs = cStmt.getResultSet();
 	   	    
-	   	    ArrayList<OfferStatus> newOfferStatuses = new ArrayList<OfferStatus>();
-	
+	   	    ArrayList<FullOffer> fullOffers = new ArrayList<FullOffer>();
+
 	   	    while(rs.next()) {
-	   	    	OfferStatus newOfferStatus = new OfferStatus(rs);
-	   	    	newOfferStatuses.add(newOfferStatus);
+	   	    	fullOffers.add(new FullOffer(rs));
 	   	    }
 	   	    
 	   	    final ApnsClient apnsClient = new ApnsClientBuilder()
 	        .setClientCredentials(new File("/home/ec2-user/ClientAPNSDeveloperCertificate.p12"), "ABCD3fgh!")
 	        .build();
 			
+	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
+	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
 	
 	   	 	//ArrayList<Device> devicesList = new ArrayList<Device>();
-	   	    for (OfferStatus newOfferStatus : newOfferStatuses) {
+	   	    for (FullOffer fullOffer : fullOffers) {
 	   	    	cStmt = con.prepareCall("{ CALL getDeviceForUser(?) }");
-		   	    cStmt.setInt(1, newOfferStatus.userId);
+		   	    cStmt.setInt(1, fullOffer.clientId);
 		   	    //cStmt.setInt(2, newAcceptOffer.get(1));
 	
 		   	    cStmt.execute();
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + newOfferStatus.offerId + " - " + newOfferStatus.status);
-	    	    payloadBuilder.setSoundFileName("default");
+		   	    payloadBuilder.setContentAvailable(true);
+	    	    payloadBuilder.setCategoryName("confirmedOffer.category");
+	    	    if(fullOffer.pushCounter == 0) {
+	    	    	java.util.Date starttime = df1.parse(fullOffer.starttime);
+	    	    	payloadBuilder.setAlertTitle(fullOffer.name);
+	    	    	payloadBuilder.setAlertSubtitle("Provider confirmed job");
+		    	    int hours = (int)fullOffer.duration; 
+		    	    int minutes = (int)(((fullOffer.duration - hours) * 10) * 60);
+		    	    String body = df2.format(starttime) + "\nDuration: ";
+		    	    if (hours > 0) {
+		    	    	if (hours == 1) {
+		    	    		body += "1 hour ";
+		    	    	} else {
+		    	    		body += hours + " hours ";
+		    	    	} 
+		    	    }
+		    	    if (minutes > 0) {
+		    	    	if (minutes == 1) {
+		    	    		body += "1 minute";
+		    	    	} else {
+		    	    		body += minutes + " minutes";
+		    	    	}
+		    	    }
+		    	    body += "\nFee: " + String.format("$%3.2f", fullOffer.fee);
+		    	    
+		    	    /*
+		    	    float avgRating = 0;
+		    	    if(fullOffer.reviewCount > 0) {
+		    	    	avgRating = (float)fullOffer.ratingSum/(float)fullOffer.reviewCount;
+		    	    }
+		    	    body += "\nProvider average rating: " + String.format("%1.1f", avgRating) + ", total reviews: " + fullOffer.reviewCount;
+		    	    */
+		    	    
+		    	    payloadBuilder.setAlertBody(body);
+		    	    payloadBuilder.setSoundFileName("default");
+	    	    }
+
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", newOfferStatus.offerId);
-	    	    payloadBuilder.addCustomProperty("status", newOfferStatus.status);
+	    	    payloadBuilder.addCustomProperty("offerId", fullOffer.offerId);
+	    	    payloadBuilder.addCustomProperty("status", fullOffer.status);
+	    	    payloadBuilder.addCustomProperty("clientId", fullOffer.clientId);
+	    	    payloadBuilder.addCustomProperty("providerId", fullOffer.providerId);
+	    	    payloadBuilder.addCustomProperty("jobId", fullOffer.jobId);
+	    	    payloadBuilder.addCustomProperty("starttime", fullOffer.starttime);
+	    	    payloadBuilder.addCustomProperty("fee", fullOffer.fee);
+	    	    payloadBuilder.addCustomProperty("duration", fullOffer.duration);
+	    	    payloadBuilder.addCustomProperty("latitude", fullOffer.latitude);
+	    	    payloadBuilder.addCustomProperty("longitude", fullOffer.longitude);
+	    	    payloadBuilder.addCustomProperty("address", fullOffer.address);
+	    	    payloadBuilder.addCustomProperty("city", fullOffer.city);
+	    	    payloadBuilder.addCustomProperty("state", fullOffer.state);
+	    	    
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
 		   	    
@@ -458,7 +515,10 @@ public class APNS {
 					sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ClientApp", payload);
 					LOGGER.info("pid after: " + device.id);
 		   	    }
-	
+		   	    cStmt.close();
+	   	    	cStmt = con.prepareCall("{ CALL updatePushCounterForOfferId(?) }");
+		   	    cStmt.setInt(1, fullOffer.offerId);
+		   	    cStmt.execute();
 	   	    }
 	   	    final Future<Void> disconnectFuture = apnsClient.disconnect();
 	        disconnectFuture.await();
@@ -497,6 +557,10 @@ public class APNS {
 	        .setClientCredentials(new File("/home/ec2-user/ClientAPNSDeveloperCertificate.p12"), "ABCD3fgh!")
 	        .build();
 			
+	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
+	   	    java.text.DateFormat df3 = new SimpleDateFormat("hh:mm a");
+	   	 
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
 	
@@ -511,11 +575,32 @@ public class APNS {
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + completedOffer.offerId + " - " + completedOffer.status);
-	    	    payloadBuilder.setSoundFileName("default");
+	    	    payloadBuilder.setContentAvailable(true);
+	    	    if(completedOffer.pushCounter == 0) {
+	    	    	java.util.Date beginTime = df1.parse(completedOffer.beginTime);
+	    	    	java.util.Date endTime = df1.parse(completedOffer.endTime);
+	    	    	payloadBuilder.setAlertTitle(completedOffer.name);
+	    	    	payloadBuilder.setAlertSubtitle("Provider completed job");
+		    	    int hours = (int)completedOffer.pausedTime; 
+		    	    int minutes = (int)(((completedOffer.pausedTime - hours) * 10) * 60);
+		    	    String body = df2.format(beginTime) + "\nDuration: " + df3.format(beginTime) + " - " + df3.format(endTime) + "\nPaused Time: ";
+	    	    	if (hours == 1) {
+	    	    		body += "1 hour ";
+	    	    	} else {
+	    	    		body += hours + " hours ";
+	    	    	} 
+	    	    	if (minutes == 1) {
+	    	    		body += "1 minute";
+	    	    	} else {
+	    	    		body += minutes + " minutes";
+	    	    	} 
+	    	    	payloadBuilder.setAlertBody(body);
+		    	    
+		    	    payloadBuilder.setSoundFileName("default");
+		    	    payloadBuilder.setCategoryName("completedOffer.category");
+	    	    }
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", completedOffer.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", completedOffer.offerId);
 	    	    payloadBuilder.addCustomProperty("status", completedOffer.status);
 	    	    
 	    	    payloadBuilder.addCustomProperty("endTime", completedOffer.endTime);
@@ -531,7 +616,11 @@ public class APNS {
 					sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ClientApp", payload);
 					LOGGER.info("pid after: " + device.id);
 		   	    }
-	
+		   	    
+		   	    cStmt.close();
+	   	    	cStmt = con.prepareCall("{ CALL updatePushCounterForOfferId(?) }");
+		   	    cStmt.setInt(1, completedOffer.offerId);
+		   	    cStmt.execute();
 	   	    }
 	   	    final Future<Void> disconnectFuture = apnsClient.disconnect();
 	        disconnectFuture.await();
@@ -549,12 +638,12 @@ public class APNS {
 	
 	void sendOnRouteOfferStatusPushNotifications() throws ClassNotFoundException, SQLException, JsonSyntaxException, Exception {
 		ResultSet rs = null;
+		CallableStatement cStmt = null;
 		Logger LOGGER = Logger.getLogger("InfoLogging");
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 	    	
 	   	    con = DriverManager.getConnection(ServletConstants.dbURL, ServletConstants.dbUsername, ServletConstants.dbPassword);
-	   	    CallableStatement cStmt = null;
 	
 	   	    cStmt = con.prepareCall("{ CALL getClientIdsForOnRouteOffers() }");
 	   	    cStmt.execute();
@@ -571,6 +660,9 @@ public class APNS {
 	        .setClientCredentials(new File("/home/ec2-user/ClientAPNSDeveloperCertificate.p12"), "ABCD3fgh!")
 	        .build();
 			
+	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
+	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
 	
@@ -587,10 +679,16 @@ public class APNS {
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
 	    	    payloadBuilder.setContentAvailable(true);
 	    	    payloadBuilder.setCategoryName("onRoute.category");
-	    	    payloadBuilder.setAlertBody("Offer id " + newOfferStatus.offerId + " - " + newOfferStatus.status);
-	    	    payloadBuilder.setSoundFileName("default");
+	    	    if(newOfferStatus.pushCounter == 0) {
+	    	    	java.util.Date starttime = df1.parse(newOfferStatus.starttime);
+	    	    	payloadBuilder.setAlertTitle(newOfferStatus.name);
+	    	    	payloadBuilder.setAlertSubtitle("Provider on route");
+	    	    	payloadBuilder.setAlertBody(df2.format(starttime));
+	    	    	payloadBuilder.setSoundFileName("default");
+	    	    }
+	    	    
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", newOfferStatus.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", newOfferStatus.offerId);
 	    	    payloadBuilder.addCustomProperty("status", newOfferStatus.status);
 	    	    payloadBuilder.addCustomProperty("latitude", newOfferStatus.latitude);
 	    	    payloadBuilder.addCustomProperty("longitude", newOfferStatus.longitude);
@@ -609,13 +707,20 @@ public class APNS {
 					sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ClientApp", payload);
 					LOGGER.info("pid after: " + device.id);
 		   	    }
-	
+		   	    
+	   	    	cStmt.close();
+	   	    	cStmt = con.prepareCall("{ CALL updatePushCounterForOfferId(?) }");
+		   	    cStmt.setInt(1, newOfferStatus.offerId);
+		   	    cStmt.execute();
 	   	    }
 	   	    final Future<Void> disconnectFuture = apnsClient.disconnect();
 	        disconnectFuture.await();
 		} finally {
 			 if (rs != null) {
 				 rs.close();
+			 }
+			 if (cStmt != null) {
+				 cStmt.close();
 			 }
 	         if (con != null) {
 	        	 con.close();
@@ -626,12 +731,13 @@ public class APNS {
 	
 	public void sendArrivedOfferStatusPushNotifications() throws ClassNotFoundException, SQLException, JsonSyntaxException, Exception {
 		ResultSet rs = null;
+		CallableStatement cStmt = null;
 		Logger LOGGER = Logger.getLogger("InfoLogging");
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 	    	
 	   	    con = DriverManager.getConnection(ServletConstants.dbURL, ServletConstants.dbUsername, ServletConstants.dbPassword);
-	   	    CallableStatement cStmt = null;
+	   	    
 	
 	   	    cStmt = con.prepareCall("{ CALL getClientIdsForArrivedOffers() }");
 	   	    cStmt.execute();
@@ -662,14 +768,36 @@ public class APNS {
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + newArrivedStatus.offerId + " - " + newArrivedStatus.status);
-	    	    payloadBuilder.setSoundFileName("default");
+	    	    payloadBuilder.setContentAvailable(true);
+	    	    
+	    	    if(newArrivedStatus.pushCounter == 0) {
+	    	    	payloadBuilder.setAlertTitle(newArrivedStatus.name);
+	    	    	payloadBuilder.setAlertSubtitle("Provider arrived");
+	    	    	payloadBuilder.setAlertBody("Launch app or expand the notification to authenticate");
+	    	    	if(newArrivedStatus.jobAuthentication.equals("both")) {	    	
+		    	    	payloadBuilder.setCategoryName("authBoth.category");
+		    	    	payloadBuilder.addCustomProperty("imageURL", newArrivedStatus.imageURL);
+		    	    	payloadBuilder.setMutableContent(true);
+		    	    } else if (newArrivedStatus.jobAuthentication.equals("portrait")) {
+		    	    	payloadBuilder.setCategoryName("authPortrait.category");
+		    	    	payloadBuilder.addCustomProperty("imageURL", newArrivedStatus.imageURL);
+		    	    	payloadBuilder.setMutableContent(true);
+		    	    } else {
+		    	    	payloadBuilder.setCategoryName("authPassword.category");
+		    	    	payloadBuilder.setMutableContent(true);
+		    	    }
+	    	    	payloadBuilder.setSoundFileName("default");
+	    	    }
+	    	    
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", newArrivedStatus.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", newArrivedStatus.offerId);
 	    	    payloadBuilder.addCustomProperty("status", newArrivedStatus.status);
 	    	    payloadBuilder.addCustomProperty("prvdrPassword", newArrivedStatus.prvdrPassword);
 	    	    payloadBuilder.addCustomProperty("clientPassword", newArrivedStatus.clientPassword);
+	    	    payloadBuilder.addCustomProperty("firstname", newArrivedStatus.firstname);
+	    	    payloadBuilder.addCustomProperty("lastname", newArrivedStatus.lastname);
+	    	    payloadBuilder.addCustomProperty("jobAuthentication", newArrivedStatus.jobAuthentication);
+	    	    
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
 		   	    
@@ -680,13 +808,19 @@ public class APNS {
 					sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ClientApp", payload);
 					LOGGER.info("pid after: " + device.id);
 		   	    }
-	
+	   	    	cStmt.close();
+	   	    	cStmt = con.prepareCall("{ CALL updatePushCounterForOfferId(?) }");
+		   	    cStmt.setInt(1, newArrivedStatus.offerId);
+		   	    cStmt.execute();
 	   	    }
 	   	    final Future<Void> disconnectFuture = apnsClient.disconnect();
 	        disconnectFuture.await();
 		} finally {
 			 if (rs != null) {
 				 rs.close();
+			 }
+			 if (cStmt != null) {
+				 cStmt.close();
 			 }
 	         if (con != null) {
 	        	 con.close();
@@ -734,11 +868,11 @@ public class APNS {
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + authStatus.offerId + " - provider authenticated");
-	    	    payloadBuilder.setSoundFileName("default");
+	    	    payloadBuilder.setContentAvailable(true);
+	    	    //payloadBuilder.setAlertBody("Offer id " + authStatus.offerId + " - provider authenticated");
+	    	    //payloadBuilder.setSoundFileName("default");
 	    	    payloadBuilder.addCustomProperty("type", "AuthStatus");
-	    	    payloadBuilder.addCustomProperty("id", authStatus.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", authStatus.offerId);
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
 		   	    
@@ -802,11 +936,11 @@ public class APNS {
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + authStatus.offerId + " - client authenticated");
-	    	    payloadBuilder.setSoundFileName("default");
+		   	    payloadBuilder.setContentAvailable(true);
+	    	    //payloadBuilder.setAlertBody("Offer id " + authStatus.offerId + " - client authenticated");
+	    	    //payloadBuilder.setSoundFileName("default");
 	    	    payloadBuilder.addCustomProperty("type", "AuthStatus");
-	    	    payloadBuilder.addCustomProperty("id", authStatus.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", authStatus.offerId);
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
 		   	    
@@ -856,6 +990,9 @@ public class APNS {
 	        .setClientCredentials(new File("/home/ec2-user/ProviderAPNSDeveloperCertificates.p12"), "ABCD3fgh!")
 	        .build();
 			
+	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
+	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
 	
@@ -871,11 +1008,15 @@ public class APNS {
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + simpleOfferStatus.offerId + " - declined");
+		   	    payloadBuilder.setContentAvailable(true);
+    	    	java.util.Date starttime = df1.parse(simpleOfferStatus.starttime);
+    	    	
+		   	    payloadBuilder.setAlertTitle(simpleOfferStatus.name);
+		   	    payloadBuilder.setAlertSubtitle("Client declined offer");
+		   	    payloadBuilder.setAlertBody(df2.format(starttime));
 	    	    payloadBuilder.setSoundFileName("default");
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", simpleOfferStatus.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", simpleOfferStatus.offerId);
 	    	    payloadBuilder.addCustomProperty("status", simpleOfferStatus.status);
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
@@ -935,7 +1076,7 @@ public class APNS {
 	        .build();
 			
 	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
-	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEEEE MMMMM dd, yyyy");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
 
 	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
@@ -952,28 +1093,36 @@ public class APNS {
 		   	    
 	        	final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
 	        	java.util.Date starttime = df1.parse(fullOffer.starttime);
-	        	payloadBuilder.setAlertTitle("New Service Offer for " + df2.format(starttime));
-	    	    
+	        	payloadBuilder.setAlertTitle(fullOffer.name);
+	        	payloadBuilder.setAlertSubtitle("Provider Service Offer");
 	    	    int hours = (int)fullOffer.duration; 
 	    	    int minutes = (int)(((fullOffer.duration - hours) * 10) * 60);
-	    	    String body = "Duration: ";
+	    	    String body = df2.format(starttime) + "\nDuration: ";
 	    	    if (hours > 0) {
 	    	    	if (hours == 1) {
-	    	    		body += "1 hour";
+	    	    		body += "1 hour ";
 	    	    	} else {
-	    	    		body += hours + " hours";
+	    	    		body += hours + " hours ";
 	    	    	} 
 	    	    }
 	    	    if (minutes > 0) {
-	    	    	body += minutes + " minutes";
+	    	    	if (minutes == 1) {
+	    	    		body += "1 minute";
+	    	    	} else {
+	    	    		body += minutes + " minutes";
+	    	    	}
 	    	    }
-	    	    body += ", Fee: " + String.format("$%3.2f", fullOffer.fee);
-	    	    payloadBuilder.setAlertBody(body);
-	    	    float avgRating = (float)fullOffer.ratingSum/(float)fullOffer.reviewCount;
-	    	    payloadBuilder.setAlertSubtitle("Provider average rating: " + String.format("%1.1f", avgRating) + ", total reviews: " + fullOffer.reviewCount);
+	    	    body += "\nFee: " + String.format("$%3.2f", fullOffer.fee);
 	    	    
+	    	    float avgRating = 0;
+	    	    if(fullOffer.reviewCount > 0) {
+	    	    	avgRating = (float)fullOffer.ratingSum/(float)fullOffer.reviewCount;
+	    	    }
+	    	    body += "\nProvider average rating: " + String.format("%1.1f", avgRating) + ", total reviews: " + fullOffer.reviewCount;
+	    	    payloadBuilder.setAlertBody(body);
 	    	    payloadBuilder.setSoundFileName("default");
 	    	    payloadBuilder.setCategoryName("serviceOffer.category");
+	    	    payloadBuilder.setContentAvailable(true);
 	    	    payloadBuilder.addCustomProperty("type", "NewServiceOffers");
 	    	    payloadBuilder.addCustomProperty("offerId", fullOffer.offerId);
 	    	    payloadBuilder.addCustomProperty("clientId", fullOffer.clientId);
@@ -1032,7 +1181,7 @@ public class APNS {
 	        .build();
 			
 	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
-	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEEEE MMMMM dd, yyyy");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
 	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
@@ -1049,14 +1198,14 @@ public class APNS {
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
 		   	    java.util.Date starttime = df1.parse(offerStatusWithAddress.starttime);
-	    	    payloadBuilder.setAlertBody("The client canceled the " 
-	    	    		+ df2.format(starttime) + " job at " 
-	    	    		+ offerStatusWithAddress.address + " " 
-	    	    		+ offerStatusWithAddress.city + "," 
-	    	    		+ offerStatusWithAddress.state);
+		   	    payloadBuilder.setContentAvailable(true);
+		   	    payloadBuilder.setAlertTitle(offerStatusWithAddress.name);
+		   	    payloadBuilder.setAlertSubtitle("Client canceled job");
+	    	    payloadBuilder.setAlertBody(df2.format(starttime) + "\n" + offerStatusWithAddress.address + "\n" 
+	    	    		+ offerStatusWithAddress.city);
 	    	    payloadBuilder.setSoundFileName("default");
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", offerStatusWithAddress.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", offerStatusWithAddress.offerId);
 	    	    payloadBuilder.addCustomProperty("status", offerStatusWithAddress.status);
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);
@@ -1106,6 +1255,9 @@ public class APNS {
 	        .setClientCredentials(new File("/home/ec2-user/ClientAPNSDeveloperCertificate.p12"), "ABCD3fgh!")
 	        .build();
 			
+	   	    java.text.DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.s");
+	   	    java.text.DateFormat df2 = new SimpleDateFormat("EEE, MMM dd");
+	   	    
 			final Future<Void> connectFuture = apnsClient.connect(ApnsClient.DEVELOPMENT_APNS_HOST);
 			connectFuture.await();
 	
@@ -1120,11 +1272,14 @@ public class APNS {
 		   	    rs = cStmt.getResultSet();
 		   	    
 		   	    final ApnsPayloadBuilder payloadBuilder = new ApnsPayloadBuilder();
-	    	    //payloadBuilder.setAlertBody(device.sunset.toString());
-	    	    payloadBuilder.setAlertBody("Offer id " + simpleOfferStatus.offerId + " - is canceled");
+		   	    payloadBuilder.setContentAvailable(true);
+		   	    payloadBuilder.setAlertTitle(simpleOfferStatus.name);
+	        	java.util.Date starttime = df1.parse(simpleOfferStatus.starttime);
+	        	payloadBuilder.setAlertSubtitle("Provider canceled service offer");
+	        	payloadBuilder.setAlertBody(df2.format(starttime));
 	    	    payloadBuilder.setSoundFileName("default");
 	    	    payloadBuilder.addCustomProperty("type", "OfferStatus");
-	    	    payloadBuilder.addCustomProperty("id", simpleOfferStatus.offerId);
+	    	    payloadBuilder.addCustomProperty("offerId", simpleOfferStatus.offerId);
 	    	    payloadBuilder.addCustomProperty("status", simpleOfferStatus.status);
 	    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 	    	    LOGGER.info("payload: " + payload);

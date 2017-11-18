@@ -14,6 +14,8 @@ public class OnRouteOffer {
 	public float longitude;
 	public float jobLatitude;
 	public float jobLongitude;
+	public int pushCounter;
+	public String name;
 	
 	OnRouteOffer(ResultSet rs) throws SQLException {
 		this.offerId = rs.getInt("offerId");
@@ -27,6 +29,8 @@ public class OnRouteOffer {
 		this.longitude = rs.getFloat("longitude");
 		this.jobLatitude = rs.getFloat("jobLatitude");
 		this.jobLongitude = rs.getFloat("jobLongitude");
+		this.pushCounter = rs.getInt("pushCounter");
+		this.name = rs.getString("name");
 	}
 
 }

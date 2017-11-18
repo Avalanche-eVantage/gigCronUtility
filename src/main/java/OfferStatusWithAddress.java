@@ -10,6 +10,8 @@ public class OfferStatusWithAddress {
 	public String address;
 	public String city;
 	public String state;
+	public String name;
+	public int pushCounter;
 	
 
 	public OfferStatusWithAddress(ResultSet rs) throws SQLException {
@@ -20,6 +22,8 @@ public class OfferStatusWithAddress {
 		this.address = rs.getString("address");
 		this.city = rs.getString("city");
 		this.state = rs.getString("state");
+		this.name = rs.getString("name");
+		this.pushCounter = rs.getInt("pushCounter");
 	}
 
 }
