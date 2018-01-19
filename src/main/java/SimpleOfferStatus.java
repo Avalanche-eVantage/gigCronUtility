@@ -8,6 +8,7 @@ public class SimpleOfferStatus {
 	public String starttime;
 	public String status;
 	public String name;
+	public int pushCounter;
 	
 	public SimpleOfferStatus(ResultSet rs) throws SQLException {
 		this.userId = rs.getInt("userId");
@@ -15,6 +16,7 @@ public class SimpleOfferStatus {
 		this.starttime = rs.getString("starttime");
 		this.status = rs.getString("status");
 		this.name = rs.getString("name");
+		this.pushCounter = rs.getInt("pushCounter");
 	}
 
 }

@@ -25,17 +25,24 @@ public class MainApp {
             	apns.sendServiceRequestPushNotifications(sqlTimeStamp);
             	apns.sendServiceOfferPushNotifications(sqlTimeStamp);
             	apns.sendInvalidatedServiceRequestPushNotifications(sqlTimeStamp);
+            	apns.sendScheduledJobPushNotifications(sqlTimeStamp);
             	apns.sendAcceptedOfferStatusPushNotifications();
             	apns.sendConfirmedOfferStatusPushNotifications();
             	apns.sendOfferDeclinedStatusPushNotifications();
             	apns.sendOnRouteOfferStatusPushNotifications();
+            	apns.sendClientCanceledJobsPushNotifications();
+            	apns.sendPrvdrCanceledJobNotifications();
             	apns.sendArrivedOfferStatusPushNotifications();
             	apns.sendPrvdrAuthStatusPushNotifications();
             	apns.sendClientAuthStatusPushNotifications();
-            	apns.sendCompletedOfferStatusPushNotifications();
-            	apns.sendClientCanceledOfferStatusPushNotifications();
-            	apns.sendPrvdrCanceledOfferStatusPushNotifications();
-            	//apns.setLastRunTimeStamp();
+            	apns.sendJobStartNotifications();
+            	apns.sendJobPauseNotifications();
+            	apns.sendJobResumeNotifications();
+            	apns.sendJobCompleteNotifications();
+            	//apns.sendCompletedOfferStatusPushNotifications();
+            	//apns.sendClientCanceledOfferStatusPushNotifications();
+            	//apns.sendPrvdrCanceledOfferStatusPushNotifications();
+
             	System.out.println("isActive: " + apns.isActive());
             	
         	} while(apns.isActive());    

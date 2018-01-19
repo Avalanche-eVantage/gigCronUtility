@@ -6,13 +6,12 @@ import java.util.Map;
 
 public class Range {
 	public int id;
-	public int jobId;
+	public int serviceRequestId;
 	public String date;
 	public String minstart;
 	public String maxstart;
 	public Float minduration;
 	public Float maxduration;
-	public int maxprovider;
 	public Float bid;
 	public String bidtype;
 	public String scheduleType;
@@ -20,10 +19,9 @@ public class Range {
 	public int repeatForDays;
 	
 	public Range(ResultSet rs) throws SQLException {
-    	jobId = rs.getInt("jobId");
+		serviceRequestId = rs.getInt("serviceRequestId");
     	minduration = rs.getFloat("mindur");
     	maxduration = rs.getFloat("maxdur");
-    	maxprovider = rs.getInt("maxprovider");
     	bid = rs.getFloat("bid");
     	bidtype = rs.getString("bidtype");
     	useFeeSchedule = rs.getInt("useFeeSchedule");
@@ -38,7 +36,7 @@ public class Range {
 	
 	public Map<String, Object> toArray() {
 		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("jobId", this.jobId);
+		map.put("serviceRequestId", this.serviceRequestId);
 		map.put("date", this.date);
 		map.put("minstart", this.minstart);
 		map.put("maxstart", this.maxstart);
