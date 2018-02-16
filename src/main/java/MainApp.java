@@ -29,10 +29,12 @@ public class MainApp {
             	apns.sendAcceptedOfferStatusPushNotifications();
             	apns.sendConfirmedOfferStatusPushNotifications();
             	apns.sendOfferDeclinedStatusPushNotifications();
-            	apns.sendOnRouteOfferStatusPushNotifications();
-            	apns.sendClientCanceledJobsPushNotifications();
+            	apns.sendOnRouteJobStatusPushNotifications();
+            	apns.sendPrvdrNoShowNotifications();
+            	apns.sendClientNoShowNotifications();
             	apns.sendPrvdrCanceledJobNotifications();
-            	apns.sendArrivedOfferStatusPushNotifications();
+            	apns.sendClientCanceledJobNotifications();
+            	apns.sendArrivedJobStatusPushNotifications();
             	apns.sendPrvdrAuthStatusPushNotifications();
             	apns.sendClientAuthStatusPushNotifications();
             	apns.sendJobStartNotifications();

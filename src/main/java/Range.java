@@ -2,6 +2,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 
 public class Range {
@@ -19,6 +20,7 @@ public class Range {
 	public int repeatForDays;
 	
 	public Range(ResultSet rs) throws SQLException {
+		id = rs.getInt("id");
 		serviceRequestId = rs.getInt("serviceRequestId");
     	minduration = rs.getFloat("mindur");
     	maxduration = rs.getFloat("maxdur");
@@ -50,4 +52,24 @@ public class Range {
 		return map;
 	}
 
+	public Boolean isAmbiguous() {
+		Logger LOGGER = Logger.getLogger("InfoLogging");
+		LOGGER.info("scheduleType: " + scheduleType);
+		if (scheduleType.equals("ASAP")) {
+			return true;
+		}
+		LOGGER.info("minduration: " + minduration + ", maxduration: " + maxduration);
+		if (maxduration > minduration) {
+			return true;
+		}
+		LOGGER.info("minstart: " + minstart + ", maxstart: " + maxstart);
+		if (!minstart.equals(maxstart)) {
+			return true;
+		}
+		LOGGER.info("repeatForDays: " + repeatForDays);
+		if (repeatForDays > 0) {
+			return true;
+		}
+		return false;
+	}
 }
