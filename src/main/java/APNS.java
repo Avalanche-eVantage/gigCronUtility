@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat;
 //import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Map;
+//import java.util.Map;
 //import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
@@ -199,6 +199,7 @@ public class APNS {
 			    	    	payloadBuilder.addCustomProperty("useFeeSchedule", range.useFeeSchedule);
 			    	    	payloadBuilder.addCustomProperty("bidtype", range.bidtype);
 			    	    	payloadBuilder.addCustomProperty("bid", range.bid);
+			    	    	payloadBuilder.addCustomProperty("feeEstimate", range.feeEstimate);
 			    	    	payloadBuilder.addCustomProperty("rangeId", range.id);
 			    	    } else {
 			    	    	payloadBuilder.setCategoryName("serviceRequest.category");
@@ -213,6 +214,7 @@ public class APNS {
 			    	    }
 			    	    payloadBuilder.setAlertBody(serviceRequest.address + "\n" + serviceRequest.city + "\n" + String.format("%1.1f", avgRating) + " avg. stars, " + serviceRequest.reviewCount + " total reviews");
 			    	    payloadBuilder.setSoundFileName("default");
+			    	    payloadBuilder.setContentAvailable(true);
 			    	    payloadBuilder.addCustomProperty("userId", device.userId);
 			    	    payloadBuilder.addCustomProperty("serviceRequestId", serviceRequest.serviceRequestId);
 			    	    payloadBuilder.addCustomProperty("clientId", serviceRequest.clientId);
@@ -225,18 +227,21 @@ public class APNS {
 			    	    payloadBuilder.addCustomProperty("avgRating", avgRating);
 			    	    payloadBuilder.addCustomProperty("reviewCount", serviceRequest.reviewCount);
 			    	    
-			    	    //Map<String, ArrayList<Map<String, Object>>> rangesMap = new HashMap<String, ArrayList<Map<String, Object>>>();
+			    	    /*
 			    	    ArrayList<Map<String, Object>> ranges = new ArrayList<Map<String, Object>>();
 
 			    	    for(Range range : rangeList) {
 			    	    	ranges.add(range.toArray());
 			    	    }
 			    	    payloadBuilder.addCustomProperty("ranges", ranges);
+			    	    */
+			    	    
 			    	    final String payload = payloadBuilder.buildWithDefaultMaximumLength();
 			    	    LOGGER.info("payload: " + payload);
 						sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ProviderApp", payload);
 						LOGGER.info("pid after: " + device.id);
 						
+						/*
 			    	    final ApnsPayloadBuilder simplePayloadBuilder = new ApnsPayloadBuilder();
 			    	    simplePayloadBuilder.setContentAvailable(true);
 			    	    
@@ -244,7 +249,7 @@ public class APNS {
 			    	    LOGGER.info("simplePayload: " + simplePayload);
 						sendPushNotification(device, apnsClient, "Com.AvalancheEvantage.ProviderApp", simplePayload);
 						LOGGER.info("pid after: " + device.id);
-						
+						*/
 					}
 	   	    }    
 		        

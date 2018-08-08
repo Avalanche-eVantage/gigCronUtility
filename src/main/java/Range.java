@@ -14,6 +14,7 @@ public class Range {
 	public Float minduration;
 	public Float maxduration;
 	public Float bid;
+	public Float feeEstimate;
 	public String bidtype;
 	public String scheduleType;
 	public int useFeeSchedule;
@@ -25,6 +26,7 @@ public class Range {
     	minduration = rs.getFloat("mindur");
     	maxduration = rs.getFloat("maxdur");
     	bid = rs.getFloat("bid");
+    	feeEstimate = rs.getFloat("feeEstimate");
     	bidtype = rs.getString("bidtype");
     	useFeeSchedule = rs.getInt("useFeeSchedule");
     	scheduleType = rs.getString("scheduleType");
@@ -45,6 +47,7 @@ public class Range {
 		map.put("minduration", this.minduration);
 		map.put("maxduration", this.maxduration);
 		map.put("bid", this.bid);
+		map.put("feeEstimate", this.feeEstimate);
 		map.put("bidtype", this.bidtype);
 		map.put("scheduleType", this.scheduleType);
 		map.put("useFeeSchedule", this.useFeeSchedule);
